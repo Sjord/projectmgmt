@@ -1,0 +1,36 @@
+#!/bin/sh
+
+set -ev
+
+if [[ $# -eq 0 ]]
+then
+    echo 'Usage: newproject projectname'
+    exit 1
+fi
+
+PORT=$(jot -r 1 8000 9000)
+PROJECT="$1"
+PROJECTDIR="$HOME/projects/$PROJECT"
+mkdir -p "$PROJECTDIR"
+
+for d in bin burp code screenshots firefox dirsearch
+do
+    mkdir -p "$PROJECTDIR/$d"
+done
+
+NOTES="$PROJECTDIR/notes-$PROJECT-$USER.txt"
+echo "$PROJECT      $USER      " $(date "+%Y-%m-%d") > "$NOTES"
+echo "---------------------------------------------------\n\n\n" >> "$NOTES"
+
+/Applications/Firefox.app/Contents/MacOS/firefox -no-remote -CreateProfile "$PROJECT $PROJECTDIR/firefox"
+cp -a $HOME/lib/firefox/* "$PROJECTDIR/firefox"
+sed -e "s/PROJECT/$PROJECT/g" -e "s/PORT/$PORT/g" -e "s/USER/$USER/g" -e "s~PROJECTDIR~$PROJECTDIR~g" $HOME/lib/firefox/user.js > "$PROJECTDIR/firefox/user.js"
+sed -e "s/PROJECT/$PROJECT/g" -e "s/PORT/$PORT/g" -e "s/USER/$USER/g" -e "s~PROJECTDIR~$PROJECTDIR~g" $HOME/lib/burp-project-options.json > "$PROJECTDIR/burp/$PROJECT.conf.json"
+echo "$HOME/bin/burp --project-file='$PROJECTDIR/burp/$PROJECT.burp' --config-file='$PROJECTDIR/burp/$PROJECT.conf.json' --unpause-spider-and-scanner" > "$PROJECTDIR/bin/burp"
+echo "/Applications/Firefox.app/Contents/MacOS/firefox -no-remote -P '$PROJECT' -profile '$PROJECTDIR/firefox' 'file://$PROJECTDIR'" > "$PROJECTDIR/bin/firefox"
+echo "/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --user-data-dir=$PROJECTDIR/chrome --proxy-server=localhost:$PORT" > "$PROJECTDIR/bin/chrome"
+chmod 755 $PROJECTDIR/bin/*
+
+ln -snf "$PROJECTDIR" "$HOME/projects/current"
+
+echo "Created $PROJECT in $PROJECTDIR on port $PORT"
